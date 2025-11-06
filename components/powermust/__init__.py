@@ -39,13 +39,12 @@ CONFIG_SCHEMA = cv.All(
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    await cg.register_component(var, config)
-    await uart.register_uart_device(var, config)
+    await cg.register_component(var, config)  # ← await
+    await uart.register_uart_device(var, config)  # ← await
 
-    # === Registrar ups_info si existe ===
     if "ups_info" in config:
         ups_info_conf = config["ups_info"]
-        ups_info = await text_sensor.new_text_sensor(ups_info_conf)
+        ups_info = await text_sensor.new_text_sensor(ups_info_conf)  # ← await
         cg.add(var.set_ups_info(ups_info))
 
     yield var
