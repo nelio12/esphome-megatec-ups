@@ -13,7 +13,7 @@ namespace powermust {
 enum ENUMPollingCommand {
   POLLING_Q1 = 0,
   POLLING_F = 1,
-  POLLING_I = 2,
+  POLLING_I = 2,  // ← Comando I: UPS Information
 };
 
 struct PollingCommand {
@@ -84,8 +84,10 @@ class Powermust : public uart::UARTDevice, public PollingComponent {
   POWERMUST_TEXT_SENSOR(last_q1, Q1)
   POWERMUST_TEXT_SENSOR(last_f, F)
 
-  // ------------------- NUEVOS SWITCHES (shutdown) -------------------
-  /***  AÑADIDOS AQUÍ  ***/
+  // ------------------- I: UPS Information -------------------
+  POWERMUST_TEXT_SENSOR(ups_info, I)  // ← Comando I: #MUST 800VA 12V 50Hz 1.0
+
+  // ------------------- SHUTDOWN SWITCHES -------------------
   void set_shutdown_switch(switch_::Switch *s) { shutdown_switch_ = s; }
   void set_shutdown_restore_switch(switch_::Switch *s) { shutdown_restore_switch_ = s; }
   void set_cancel_shutdown_switch(switch_::Switch *s) { cancel_shutdown_switch_ = s; }
@@ -134,8 +136,12 @@ class Powermust : public uart::UARTDevice, public PollingComponent {
   uint8_t last_polling_command_ = 0;
   PollingCommand used_polling_commands_[15];
 
-  // ------------------- VARIABLES DE LOS NUEVOS SWITCHES -------------------
-  /***  AÑADIDAS AQUÍ  ***/
+  // ------------------- VARIABLES DE LOS SWITCHES -------------------
+  switch_::Switch *beeper_switch_{nullptr};
+  switch_::Switch *quick_test_switch_{nullptr};
+  switch_::Switch *deep_test_switch_{nullptr};
+  switch_::Switch *ten_minutes_test_switch_{nullptr};
+
   switch_::Switch *shutdown_switch_{nullptr};
   switch_::Switch *shutdown_restore_switch_{nullptr};
   switch_::Switch *cancel_shutdown_switch_{nullptr};
