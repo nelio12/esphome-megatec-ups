@@ -137,7 +137,7 @@ void Powermust::loop() {
         char status_bits[16]; // Un buffer para guardar los bits: "00001001"
         
         // Aquí declaramos 'items_assigned'
-        int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %f %15s", // Lee los bits como una cadena
+        int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %*s %15s", // Lee los bits como una cadena
                &value_grid_voltage_,
                &value_grid_fault_voltage_,
                &value_ac_output_voltage_,
