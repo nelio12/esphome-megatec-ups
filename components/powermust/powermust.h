@@ -86,6 +86,7 @@ class Powermust : public uart::UARTDevice, public PollingComponent {
 
   // ------------------- I: UPS Information -------------------
   POWERMUST_TEXT_SENSOR(ups_info, I)  // ← Comando I: #MUST 800VA 12V 50Hz 1.0
+  void set_ups_info(text_sensor::TextSensor *s) { ups_info_ = s; }
 
   // ------------------- SHUTDOWN SWITCHES -------------------
   void set_shutdown_switch(switch_::Switch *s) { shutdown_switch_ = s; }
@@ -145,6 +146,7 @@ class Powermust : public uart::UARTDevice, public PollingComponent {
   switch_::Switch *shutdown_switch_{nullptr};
   switch_::Switch *shutdown_restore_switch_{nullptr};
   switch_::Switch *cancel_shutdown_switch_{nullptr};
+  text_sensor::TextSensor *ups_info_{nullptr};
 };
 
 }  // namespace powermust
