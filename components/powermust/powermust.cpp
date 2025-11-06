@@ -132,47 +132,59 @@ void Powermust::loop() {
     char tmp[POWERMUST_READ_BUFFER_LENGTH];
     sprintf(tmp, "%s", this->read_buffer_);
     switch (this->used_polling_commands_[this->last_polling_command_].identifier) {
-      case POLLING_Q1: { // Usamos llaves para crear un scope local
-        ESP_LOGD(TAG, "Decode Q1");
-        char status_bits[16]; // Un buffer para guardar los bits: "00001001"
-        
-        // Aquí declaramos 'items_assigned'
-        int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %*s %15s", // Lee los bits como una cadena
-               &value_grid_voltage_,
-               &value_grid_fault_voltage_,
-               &value_ac_output_voltage_,
-               &value_ac_output_load_percent_,
-               &value_grid_frequency_,
-               &value_battery_voltage_,
-               &value_temperature_,
-               status_bits); // Guarda "00001001\r" aquí
+      case POLLING_Q1: {
+  ESP_LOGD(TAG, "Decode Q1");
+  char temp_str[8] = {0};
+  char status_bits[16] = {0};
 
-        // Comprobamos la variable (ahora esperamos 8 items)
-        if (items_assigned < 8) {
-          ESP_LOGW(TAG, "sscanf Q1 falló! Solo asignó %d de 8 items. Trama: %s", items_assigned, tmp);
-          this->state_ = STATE_IDLE; // Abortar
-          break; // Salir del case
-        }
+  int items_assigned = sscanf(tmp, "(%f %f %f %d %f %f %7s %15s",
+         &value_grid_voltage_,
+         &value_grid_fault_voltage_,
+         &value_ac_output_voltage_,
+         &value_ac_output_load_percent_,
+         &value_grid_frequency_,
+         &value_battery_voltage_,
+         temp_str,
+         status_bits);
 
-        // Ahora, 'status_bits' contiene algo como "00001001".
-        // Lo parseamos manualmente, comprobando la longitud (strlen)
-        size_t len = strlen(status_bits);
+  if (items_assigned < 8) {
+    ESP_LOGW(TAG, "sscanf Q1 falló! Asignó %d/8. Trama: '%s'", items_assigned, tmp);
+    this->state_ = STATE_IDLE;
+    break;
+  }
 
-        value_utility_fail_     = (len >= 1 && status_bits[0] == '1') ? 1 : 0;
-        value_battery_low_      = (len >= 2 && status_bits[1] == '1') ? 1 : 0;
-        value_bypass_active_    = (len >= 3 && status_bits[2] == '1') ? 1 : 0;
-        value_ups_failed_       = (len >= 4 && status_bits[3] == '1') ? 1 : 0;
-        value_ups_type_standby_ = (len >= 5 && status_bits[4] == '1') ? 1 : 0;
-        value_test_in_progress_ = (len >= 6 && status_bits[5] == '1') ? 1 : 0;
-        value_shutdown_active_  = (len >= 7 && status_bits[6] == '1') ? 1 : 0;
-        value_beeper_on_        = (len >= 8 && status_bits[7] == '1') ? 1 : 0;
+  // --- Parse temperatura ---
+  if (strcmp(temp_str, "--.-") == 0 || strcmp(temp_str, "?.?") == 0) {
+    value_temperature_ = NAN;
+  } else {
+    value_temperature_ = strtof(temp_str, nullptr);
+  }
 
-        if (this->last_q1_) {
-          this->last_q1_->publish_state(tmp);
-        }
-        this->state_ = STATE_POLL_DECODED;
-        break;
-      } // Fin del scope
+  // --- Parse bits ---
+  size_t len = strlen(status_bits);
+  ESP_LOGD(TAG, "Status bits raw: '%s' (len=%d)", status_bits, (int)len);
+
+  value_utility_fail_     = (len >= 1 && status_bits[0] == '1') ? 1 : 0;
+  value_battery_low_      = (len >= 2 && status_bits[1] == '1') ? 1 : 0;
+  value_bypass_active_    = (len >= 3 && status_bits[2] == '1') ? 1 : 0;
+  value_ups_failed_       = (len >= 4 && status_bits[3] == '1') ? 1 : 0;
+  value_ups_type_standby_ = (len >= 5 && status_bits[4] == '1') ? 1 : 0;
+  value_test_in_progress_ = (len >= 6 && status_bits[5] == '1') ? 1 : 0;
+  value_shutdown_active_  = (len >= 7 && status_bits[6] == '1') ? 1 : 0;
+  value_beeper_on_        = (len >= 8 && status_bits[7] == '1') ? 1 : 0;
+
+  // --- Log para depuración ---
+  ESP_LOGD(TAG, "Q1 → Grid:%.1fV Out:%.1fV Load:%d%% Temp:%s Beeper:%s",
+           value_grid_voltage_, value_ac_output_voltage_, value_ac_output_load_percent_,
+           temp_str, value_beeper_on_ ? "ON" : "OFF");
+
+  if (this->last_q1_) {
+    this->last_q1_->publish_state(tmp);
+  }
+
+  this->state_ = STATE_POLL_DECODED;
+  break;
+}
       case POLLING_F:
         ESP_LOGD(TAG, "Decode F");
         // "#220.0 003 12.00 50.0\r"
