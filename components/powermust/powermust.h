@@ -13,6 +13,7 @@ namespace powermust {
 enum ENUMPollingCommand {
   POLLING_Q1 = 0,
   POLLING_F = 1,
+  POLLING_I = 2,
 };
 
 struct PollingCommand {
