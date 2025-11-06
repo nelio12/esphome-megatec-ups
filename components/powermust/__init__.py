@@ -1,5 +1,5 @@
 import esphome.codegen as cg
-from esphome.components import uart, binary_sensor, sensor, switch, text_sensor
+from esphome.components import uart, text_sensor
 import esphome.config_validation as cv
 from esphome.const import CONF_ID
 
@@ -12,39 +12,31 @@ CONF_POWERMUST_ID = "powermust_id"
 powermust_ns = cg.esphome_ns.namespace("powermust")
 PowermustComponent = powermust_ns.class_("Powermust", cg.Component)
 
-# === Schema base para subcomponentes ===
-POWERMUST_COMPONENT_SCHEMA = cv.Schema(
-    {
-        cv.Required(CONF_POWERMUST_ID): cv.use_id(PowermustComponent),
-    }
-)
+POWERMUST_COMPONENT_SCHEMA = cv.Schema({
+    cv.Required(CONF_POWERMUST_ID): cv.use_id(PowermustComponent),
+})
 
-# === CONFIG_SCHEMA principal ===
 CONFIG_SCHEMA = cv.All(
     cv.Schema({
         cv.GenerateID(): cv.declare_id(PowermustComponent),
-
-        # --- Polling y UART ---
         cv.Optional("update_interval", default="10s"): cv.update_interval,
-
-        # --- Text Sensor: ups_info ---
         cv.Optional("ups_info"): text_sensor.text_sensor_schema(
             icon="mdi:information-outline"
         ),
-
     })
     .extend(cv.polling_component_schema("10s"))
     .extend(uart.UART_DEVICE_SCHEMA)
 )
 
+# ← ¡CORREGIDO: async def!
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    await cg.register_component(var, config)  # ← await
-    await uart.register_uart_device(var, config)  # ← await
+    await cg.register_component(var, config)          # ← await
+    await uart.register_uart_device(var, config)      # ← await
 
     if "ups_info" in config:
         ups_info_conf = config["ups_info"]
         ups_info = await text_sensor.new_text_sensor(ups_info_conf)  # ← await
         cg.add(var.set_ups_info(ups_info))
 
-    yield var
+    yield var  # ← ¡Este yield SÍ está permitido al final!
