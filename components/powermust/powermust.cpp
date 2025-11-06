@@ -38,40 +38,68 @@ void Powermust::loop() {
     }
   }
 if (this->state_ == STATE_COMMAND_COMPLETE) {
+  std::string current_cmd = this->command_queue_[this->command_queue_position_];
   bool success = false;
 
-  // Comandos que devuelven ACK (como T, TL, S, etc.)
-  std::string current_cmd = this->command_queue_[this->command_queue_position_];
-
-  bool is_ack_command = (current_cmd == "T" || 
-                         current_cmd == "TL" || 
-                         current_cmd == "S" || 
-                         current_cmd == "CT" || 
-                         current_cmd == "C");
+  // === COMANDOS QUE ESPERAN ACK/NAK ===
+  bool is_ack_command = (
+      current_cmd == "T" ||
+      current_cmd == "TL" ||
+      current_cmd == "T10" ||
+      current_cmd == "CT" ||
+      current_cmd == "Q" ||
+      current_cmd == "C" ||
+      current_cmd == "CL" ||
+      (!current_cmd.empty() && current_cmd[0] == 'S')  // S03, S02R0060, etc.
+  );
 
   if (is_ack_command) {
-    // Éxito si recibimos algo que NO sea NAK
     if (this->read_pos_ > 0) {
-      // Limpiar \r si existe
+      // Eliminar \r si existe
       if (this->read_buffer_[this->read_pos_ - 1] == '\r') {
         this->read_buffer_[--this->read_pos_] = '\0';
       }
+
       if (this->read_pos_ >= 3 && memcmp(this->read_buffer_, "NAK", 3) == 0) {
-        ESP_LOGE(TAG, "Command failed: NAK");
+        ESP_LOGE(TAG, "Command failed: NAK for '%s'", current_cmd.c_str());
       } else {
-        ESP_LOGI(TAG, "Command successful: ACK received");
+        ESP_LOGI(TAG, "Command successful: ACK for '%s'", current_cmd.c_str());
         success = true;
       }
     } else {
-      ESP_LOGE(TAG, "Command failed: no response");
+      ESP_LOGE(TAG, "Command failed: no response for '%s'", current_cmd.c_str());
     }
   } else {
-    // Comandos que NO deben responder (ej: algunos futuros)
+    // Comandos sin respuesta esperada
     if (this->read_pos_ == 0) {
       ESP_LOGI(TAG, "Command successful: no response expected");
       success = true;
     } else {
       ESP_LOGE(TAG, "Command failed: unexpected response");
+    }
+  }
+
+  // === APAGAR SWITCH VISUALMENTE (momentáneos) ===
+  if (success) {
+    if (current_cmd == "T" && this->quick_test_switch_) {
+      this->quick_test_switch_->publish_state(false);
+    } else if (current_cmd == "TL" && this->deep_test_switch_) {
+      this->deep_test_switch_->publish_state(false);
+    } else if (current_cmd == "T10" && this->ten_minutes_test_switch_) {
+      this->ten_minutes_test_switch_->publish_state(false);
+    } else if (current_cmd == "CT") {
+      // CT no tiene switch propio, pero limpiamos si existe
+      if (this->quick_test_switch_) this->quick_test_switch_->publish_state(false);
+      if (this->deep_test_switch_) this->deep_test_switch_->publish_state(false);
+      if (this->ten_minutes_test_switch_) this->ten_minutes_test_switch_->publish_state(false);
+    } else if (current_cmd[0] == 'S') {
+      if (current_cmd.find("R") != std::string::npos && this->shutdown_restore_switch_) {
+        this->shutdown_restore_switch_->publish_state(false);
+      } else if (this->shutdown_switch_) {
+        this->shutdown_switch_->publish_state(false);
+      }
+    } else if (current_cmd == "C" && this->cancel_shutdown_switch_) {
+      this->cancel_shutdown_switch_->publish_state(false);
     }
   }
 
