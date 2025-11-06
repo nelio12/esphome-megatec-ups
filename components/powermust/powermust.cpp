@@ -153,6 +153,13 @@ void Powermust::loop() {
                &value_test_in_progress_,                               // NOLINT
                &value_shutdown_active_,                                // NOLINT
                &value_beeper_on_);                                     // NOLINT
+
+        // --- AÑADE ESTA LÍNEA DE DEPURACIÓN ---
+        if (items_assigned < 15) {
+          ESP_LOGW(TAG, "sscanf Q1 falló! Solo asignó %d de 15 items. Trama: %s", items_assigned, tmp);
+        }
+        // --- FIN DE LÍNEA DE DEPURACIÓN ---
+        
         if (this->last_q1_) {
           this->last_q1_->publish_state(tmp);
         }
