@@ -39,4 +39,4 @@ async def to_code(config):
         ups_info = await text_sensor.new_text_sensor(ups_info_conf)  # ← await
         cg.add(var.set_ups_info(ups_info))
 
-    yield var  # ← ¡Este yield SÍ está permitido al final!
+    yield var  # ← ¡Este yield SÍ va al final!
